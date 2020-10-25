@@ -75,7 +75,7 @@ def read_prescriptions_table(mimic3_path):
     prescriptions=prescriptions[['SUBJECT_ID','HADM_ID','ICUSTAY_ID','NDC','DOSE_VAL_RX', 'DOSE_UNIT_RX','STARTDATE','ENDDATE']]
 
     #exclude = ['GSN']
-    #prescriptions=prescriptions.ix[:, prescriptions.columns.difference(exclude)].hist()
+    #prescriptions=prescriptions.loc[:, prescriptions.columns.difference(exclude)].hist()
     #print (prescriptions)
     return prescriptions
 
@@ -96,7 +96,7 @@ def count_icd_codes(diagnoses, output_path=None):
     counts=diagnoses[['ICD9_CODE','HADM_ID']].drop_duplicates()
     codes['COUNT'] = counts.groupby('ICD9_CODE')['HADM_ID'].count()
     codes.COUNT = codes.COUNT.fillna(0).astype(int)
-    codes = codes.ix[codes.COUNT>0]
+    codes = codes.loc[codes.COUNT>0]
     if output_path:
         codes.to_csv(output_path, index_label='ICD9_CODE')
     return codes.sort_values('COUNT', ascending=False).reset_index()
@@ -107,9 +107,15 @@ def merge_on_subject(table1, table2):
 def merge_on_subject_admission(table1, table2):
     return table1.merge(table2, how='inner', left_on=['SUBJECT_ID', 'HADM_ID'], right_on=['SUBJECT_ID', 'HADM_ID'])
 
+def compute_age(stay):
+    factor = 3600.0*24*365.24 * np.timedelta64(1,'s')
+    age = (stay.INTIME.to_datetime64() - stay.DOB.to_datetime64()) / factor 
+    if age < 0:
+        age = 90.0
+    return age
+
 def add_age_to_icustays(stays):
-    stays['AGE'] = (stays.INTIME - stays.DOB).apply(lambda s: s / np.timedelta64(1, 's')) / 60./60/24/365
-    stays.ix[stays.AGE<0,'AGE'] = 90
+    stays['AGE'] = stays.apply(compute_age, axis=1)
     return stays
 
 def add_inhospital_mortality_to_icustays(stays):
@@ -127,7 +133,7 @@ def add_inunit_mortality_to_icustays(stays):
     return stays
 
 def filter_icustays_on_age(stays, min_age=18, max_age=np.inf):
-    stays = stays.ix[(stays.AGE>=min_age)&(stays.AGE<=max_age)]
+    stays = stays.loc[(stays.AGE>=min_age)&(stays.AGE<=max_age)]
     return stays
 
 def filter_diagnoses_on_stays(diagnoses, stays):
@@ -146,7 +152,7 @@ def break_up_stays_by_subject(stays, output_path, subjects=None, verbose=1):
         except:
             pass
 
-        stays.ix[stays.SUBJECT_ID == subject_id].sort_values(by='INTIME').to_csv(os.path.join(dn, 'stays.csv'), index=False)
+        stays.loc[stays.SUBJECT_ID == subject_id].sort_values(by='INTIME').to_csv(os.path.join(dn, 'stays.csv'), index=False)
 
     if verbose:
         sys.stdout.write('DONE!\n')
@@ -163,7 +169,7 @@ def break_up_transfers_by_subject(transfers, output_path, subjects=None, verbose
         except:
             pass
 
-        transfers.ix[transfers.SUBJECT_ID == subject_id].sort_values(by='INTIME').to_csv(os.path.join(dn, 'transfers.csv'), index=False)
+        transfers.loc[transfers.SUBJECT_ID == subject_id].sort_values(by='INTIME').to_csv(os.path.join(dn, 'transfers.csv'), index=False)
     if verbose:
         sys.stdout.write('DONE!\n')
 
@@ -179,7 +185,7 @@ def break_up_diagnoses_by_subject(diagnoses, output_path, subjects=None, verbose
         except:
             pass
 
-        diagnoses.ix[diagnoses.SUBJECT_ID == subject_id].sort_values(by=['ICUSTAY_ID','SEQ_NUM']).to_csv(os.path.join(dn, 'diagnoses.csv'), index=False)
+        diagnoses.loc[diagnoses.SUBJECT_ID == subject_id].sort_values(by=['ICUSTAY_ID','SEQ_NUM']).to_csv(os.path.join(dn, 'diagnoses.csv'), index=False)
     if verbose:
         sys.stdout.write('DONE!\n')
 
@@ -195,7 +201,7 @@ def break_up_procedures_by_subject(procedures, output_path, subjects=None, verbo
         except:
             pass
 
-        procedures.ix[procedures.SUBJECT_ID == subject_id].sort_values(by=['ICUSTAY_ID', 'SEQ_NUM']).to_csv(os.path.join(dn, 'procedures.csv'), index=False)
+        procedures.loc[procedures.SUBJECT_ID == subject_id].sort_values(by=['ICUSTAY_ID', 'SEQ_NUM']).to_csv(os.path.join(dn, 'procedures.csv'), index=False)
     if verbose:
         sys.stdout.write('DONE!\n')
 
@@ -214,7 +220,7 @@ def break_up_prescriptions_by_subject(prescriptions, output_path, subjects=None,
         except:
             pass
 
-        prescriptions.ix[prescriptions.SUBJECT_ID == subject_id].sort_values(by='STARTDATE').to_csv(os.path.join(dn, 'prescriptions.csv'), index=False)
+        prescriptions.loc[prescriptions.SUBJECT_ID == subject_id].sort_values(by='STARTDATE').to_csv(os.path.join(dn, 'prescriptions.csv'), index=False)
 
     if verbose:
         sys.stdout.write('DONE!\n')
