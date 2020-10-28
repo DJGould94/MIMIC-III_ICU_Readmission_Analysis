@@ -107,9 +107,16 @@ def merge_on_subject(table1, table2):
 def merge_on_subject_admission(table1, table2):
     return table1.merge(table2, how='inner', left_on=['SUBJECT_ID', 'HADM_ID'], right_on=['SUBJECT_ID', 'HADM_ID'])
 
+
+def compute_age(stay):
+    factor = 3600.0*24*365.24 * np.timedelta64(1,'s')
+    age = (stay.INTIME.to_datetime64() - stay.DOB.to_datetime64()) / factor 
+    if age < 0:
+        age = 90.0
+    return age
+
 def add_age_to_icustays(stays):
-    stays['AGE'] = (stays.INTIME - stays.DOB).apply(lambda s: s / np.timedelta64(1, 's')) / 60./60/24/365
-    stays.ix[stays.AGE<0,'AGE'] = 90
+    stays['AGE'] = stays.apply(compute_age, axis=1)
     return stays
 
 def add_inhospital_mortality_to_icustays(stays):

@@ -1,0 +1,14 @@
+name: mimic3
+channels:
+  - conda-forge
+dependencies:
+  - python=3.7
+  - pandas
+  - keras
+  - scikit-learn
+  - pip
+  - seaborn
+  - jupyterlab
+  - pip:
+    - plaidml
+    - temp_path
