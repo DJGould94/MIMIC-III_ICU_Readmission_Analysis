@@ -107,6 +107,10 @@ def merge_on_subject(table1, table2):
 def merge_on_subject_admission(table1, table2):
     return table1.merge(table2, how='inner', left_on=['SUBJECT_ID', 'HADM_ID'], right_on=['SUBJECT_ID', 'HADM_ID'])
 
+<<<<<<< HEAD:mimic3-readmission/scripts/mimic3benchmark/mimic3csv.py
+=======
+
+>>>>>>> retro:mimic3-readmission/mimic3benchmark/mimic3csv.py
 def compute_age(stay):
     factor = 3600.0*24*365.24 * np.timedelta64(1,'s')
     age = (stay.INTIME.to_datetime64() - stay.DOB.to_datetime64()) / factor 

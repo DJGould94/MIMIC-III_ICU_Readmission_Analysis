@@ -4,14 +4,36 @@ This is the source code for the paper 'Analysis and Prediction of Unplanned Inte
 ## Requirements
 
 1. You need to first get access to MIMIC-III data by  yourself from https://mimic.physionet.org/, and save all of the csv files into a directory.
-We do not provide the MIMIC-III data itself. 
+We do not provide the MIMIC-III data itself.
 
-2. Install the following packages:
+__BEC__: I've modified the code to read the gzipped files, if present, so you do not need to uncompress the MIMIC files.
 
-- numpy
-- pandas
-- Keras
-- scikit_learn
+2. I've created a conda `environment.yml` file that will create an environment that will run the software. I've added sevreral dependencies, not in the original code:
+
+- `plaidml` so that `keras` can access the GPU on non-NVIDIA machines.
+- `jupyter`
+
+The original code did not specify which versions of the packages were used. I empirically determined that Python 3.5 and Pandas 0.9 worked.
+
+Create the environment by running:
+
+```bash
+conda env create -f environment.yml
+```
+
+Then activate the environment by running
+
+```bash
+conda activate mimic3_retro
+```
+
+## Preprocessing
+
+Scripts and notebooks can be executed from the `scripts` directory without any need to modify the `PYTHONPATH`, as suggested in the original `README`.
+
+I have translated several of the scripts to Jupyter notebooks. The most substantial edit for this, is replacing the command line argument parsing with fixed values.
+
+Also much (all?) of the preprocessing steps can be done in parallel, greatly increasing the execution speed. I have done this for one of the scripts.
 
 
 3. Download pre-trained ICD 9 Embeddings
@@ -20,26 +42,21 @@ In this study, our models were trained on a lower dimension embedding of ICD9. W
 Please download the `claims_codes_hs_300.txt.gz`, extract it, and put the `claims_codes_hs_300.txt` into `/embeddings` folder.
 
 
-## Preprocessing
-1. Add the path to the `PYTHONPATH`.
-
-    export PYTHONPATH=$PYTHONPATH:[PATH TO THIS REPOSITORY]
-
 
 2. For each patient, `SUBJECT_ID`, we generate the `stays.csv`, `events.csv`, `diagnoses.csv`,`transfers.csv`,`procedures.csv`and `prescriptions.csv`. We place them into the directory `data/[SUBJECT_ID/`. In this study, we only use `stays.csv`, `events.csv`, and `diagnoses.csv`. The rest of the file will be used in the future work.
 
        python scripts/extract_subjects.py [MIMIC-III CSVs PATH] [OUTPUT PATH]
 
-3. We then try to to fix some missing data issue(ICU stay ID is missing). If the issues cannot be solved, we then removes the events. The code is provided by [1].
+3. We then try to to fix some missing data issues (ICU stay ID is missing). If the issues cannot be solved, we then removes the events. The code is provided by [1].
 
 
-       python scripts/validate_events.py [OUTPUT PATH]
-       
+       `python scripts/validate_events.py [OUTPUT PATH]`
+
 4. We then preprocess the label of readmission, The following 4 cases of readmission are computed in this steps. The output will be saved in `stays_readmission.csv`.
 (1) The patients were transferred to low-level wards from ICU, but returned to ICU again.
 (2) The patients were transferred to low-level wards from ICU, and died later.
 (3) The patients were discharged, but returned to the hospital within the next 30 days.
-(4) The patients were discharged, and died within the next 30 days. 
+(4) The patients were discharged, and died within the next 30 days.
 
        python scripts/create_readmission.py [OUTPUT PATH]
 
@@ -63,26 +80,26 @@ In this section, we use LSTM and LSTM_CNN as examples. you may want to different
 
        cd /mimic3models/readmission_baselines/logistic_cv_0
        python svm_s_p.py
-	
+
 2. LSTM F48-h CE + ICD9. In this step, we use the first 48 hours chart events after admitting to IUC to predict readmission.
 
        cd /mimic3models/readmission_f48/
-       python3 -u main.py --network ../common_keras_models/lstm.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8 
+       python3 -u main.py --network ../common_keras_models/lstm.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8
 
 3. LSTM L48-h CE + ICD9. In this step, we use the last 48 hours chart events before discharging from IUC to predict readmission.
 
        cd /mimic3models/readmission_no_d/
-       python3 -u main.py --network ../common_keras_models/lstm.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8 
+       python3 -u main.py --network ../common_keras_models/lstm.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8
 
 4. LSTM L48-h CE. In this step, in order to see the impact of disease features, we remove the ICD 9 imbedding features to predict readmission.
 
        cd /mimic3models/readmission_no_icd9/
-       python3 -u main.py --network ../common_keras_models/lstm.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8 
+       python3 -u main.py --network ../common_keras_models/lstm.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8
 
 5. LSTM+CNN L48-h CE + ICD9 + D. In this step, we include all of the information that we preprocess to predict readmission.
-	
+
        cd /mimic3models/readmission/
-       python3 -u main.py --network ../common_keras_models/lstm_cnn.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8 
+       python3 -u main.py --network ../common_keras_models/lstm_cnn.py --dim 16 --timestep 1.0 --depth 2 --dropout 0.3 --mode test --batch_size 8
 
 References
 
